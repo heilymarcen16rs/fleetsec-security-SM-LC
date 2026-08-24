@@ -1,0 +1,72 @@
+# FleetSec custom Semgrep rules — tuned to the Node.js/Express stack.
+# Run: semgrep --config semgrep/fleetsec-rules.yaml --config p/owasp-top-ten app/
+#
+# R1 & R3 use taint mode (data-flow from request source -> dangerous sink) so
+# they follow the value through intermediate variables and fire ONLY on the
+# vulnerable handlers, not on the remediated ones.
+rules:
+  # ------------------------------------------------------------------ R1
+  - id: fleetsec-sqli-request-to-exec
+    languages: [javascript, typescript]
+    severity: ERROR
+    mode: taint
+    message: >
+      Request-controlled value reaches a raw SQL execution sink (db.exec/db.run).
+      Use parameterized prepared statements: db.prepare(sql).bind([params]).
+    metadata:
+      cwe: "CWE-89: SQL Injection"
+      owasp: "A03:2021 Injection"
+    pattern-sources:
+      - pattern: req.query.$X
+      - pattern: req.params.$X
+      - pattern: req.body.$X
+    pattern-sinks:
+      - pattern: $DB.exec(...)
+      - pattern: $DB.run(...)
+
+  # ------------------------------------------------------------------ R2
+  - id: fleetsec-ssrf-request-to-fetch
+    languages: [javascript, typescript]
+    severity: ERROR
+    mode: taint
+    message: >
+      Request-controlled URL reaches fetch() without allowlist / private-IP checks
+      (SSRF). Validate scheme + host allowlist, resolve DNS and reject private ranges.
+    metadata:
+      cwe: "CWE-918: Server-Side Request Forgery"
+      owasp: "A10:2021 SSRF"
+    pattern-sources:
+      - pattern: req.query.$X
+      - pattern: req.params.$X
+      - pattern: req.body.$X
+    pattern-sinks:
+      - pattern: fetch(...)
+
+  # ------------------------------------------------------------------ R3
+  - id: fleetsec-jwt-unpinned-algorithm
+    languages: [javascript, typescript]
+    severity: ERROR
+    message: >
+      JWT verified without a pinned algorithm allowlist, or decoded without
+      verification. Always pass { algorithms: ['HS256'|'RS256'] } and never 'none'.
+    metadata:
+      cwe: "CWE-345: Insufficient Verification of Data Authenticity"
+      owasp: "A07:2021 Identification and Authentication Failures"
+    patterns:
+      - pattern-either:
+          - pattern: "jwt.verify($T, $K)"
+          - pattern: "jwt.decode($T)"
+
+  # ------------------------------------------------------------------ R4
+  - id: fleetsec-hardcoded-secret
+    languages: [javascript, typescript]
+    severity: ERROR
+    message: >
+      Hardcoded secret/credential literal in source. Move to an environment
+      variable backed by AWS Secrets Manager and rotate the exposed value.
+    metadata:
+      cwe: "CWE-798: Use of Hard-coded Credentials"
+      owasp: "A05:2021 Security Misconfiguration"
+    patterns:
+      - pattern-regex: '(?i)(dbpassword|jwtsecret|password|secret|passwd|api[_-]?key|access[_-]?key)\s*:\s*''[^'']{6,}'''
+      - pattern-not-regex: '(?i)(process\.env|dev-only|rotate-me|example|redacted|null|configured)'
