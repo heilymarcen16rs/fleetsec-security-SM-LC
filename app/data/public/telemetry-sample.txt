@@ -1,0 +1,2 @@
+vehicle=ABC123 speed=54 lat=4.6097 lon=-74.0817 ts=2026-08-23T10:00:00Z
+This is a legitimate, public sample file served by the /download endpoint.
