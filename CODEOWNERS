@@ -1,0 +1,16 @@
+# CODEOWNERS — enforces review ownership.
+# Break-glass (D. Operación): changes to security-critical paths require review
+# from TWO code owners (configure "Require review from Code Owners" + a branch
+# protection rule of 2 approvals on main). The break-glass workflow additionally
+# opens a CRITICAL audit issue on every emergency override.
+
+# Security-critical paths — 2 owners required
+/.github/workflows/      @fleetsec/secops @fleetsec/platform-leads
+/terraform/              @fleetsec/secops @fleetsec/cloud-platform
+/semgrep/                @fleetsec/secops
+/detection/              @fleetsec/secops
+/.gitleaks.toml          @fleetsec/secops
+/CODEOWNERS              @fleetsec/secops @fleetsec/platform-leads
+
+# Application code
+/app/                    @fleetsec/app-team @fleetsec/secops

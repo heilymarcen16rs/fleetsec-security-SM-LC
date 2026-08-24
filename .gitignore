@@ -1,0 +1,18 @@
+node_modules/
+coverage/
+*.log
+.env
+.env.*
+!.env.example
+dist/
+build/
+.DS_Store
+# security artifacts (regenerated in CI)
+reports/
+sbom.json
+*.sarif
+.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+.checkov.baseline

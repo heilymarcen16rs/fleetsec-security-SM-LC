@@ -1,0 +1,26 @@
+# Gitleaks configuration for FleetSec.
+# Extends the default ruleset (AWS keys, JWT, DB passwords, generic secrets).
+[extend]
+useDefault = true
+
+# ---------------------------------------------------------------------------
+# DOCUMENTED SUPPRESSION (mirrors the "razón · fecha · responsable" quality-gate
+# discipline required for SAST). The file app/src/config.js intentionally holds a
+# NON-PRODUCTION teaching secret so finding V-10 (CWE-798) is reproducible and its
+# before/after is auditable. The values are fake/example-format and are removed by
+# the V-10 remediation in the /secure path.
+#   Reason:       intentional VAPT lab artifact for finding V-10
+#   Date:         2026-08-23
+#   Owner:        Security Engineering (candidate)
+#   Review-by:    remove lab file before any production deployment
+# ---------------------------------------------------------------------------
+[allowlist]
+description = "Intentional lab secret for VAPT finding V-10 (non-production)"
+paths = [
+  '''app/src/config\.js''',
+]
+regexes = [
+  '''AKIAIOSFODNN7EXAMPLE''',      # AWS documentation example key (not live)
+  '''FleetSec_Pr0d_DB_2024!''',    # lab-only DB password
+  '''super-secret-hs256-key-do-not-ship''',
+]

@@ -1,0 +1,40 @@
+# One command brings up the full demo environment (Bonus +5%):
+#   docker compose up --build
+#
+# - fleetsec-api : the app. LAB_MODE=true exposes the /vuln surface for the VAPT
+#                  walkthrough; set LAB_MODE=false to serve only /secure.
+# - zap          : OWASP ZAP, used by the DAST job / manual walkthrough.
+services:
+  fleetsec-api:
+    build: ./app
+    container_name: fleetsec-api
+    environment:
+      NODE_ENV: development
+      LAB_MODE: "true"          # demo lab exposed; NEVER true in production
+      PORT: "3000"
+      JWT_SECRET: "dev-only-rotate-me"
+      DB_PASSWORD: "injected-from-secrets-manager-in-aws"
+      SSRF_ALLOWED_HOSTS: "api.partner.com,example.com"
+    ports:
+      - "3000:3000"
+    read_only: true             # immutable root FS (CIS Docker 5.12)
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true  # (CIS Docker 5.25)
+    cap_drop:
+      - ALL
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 3s
+      retries: 5
+
+  zap:
+    image: ghcr.io/zaproxy/zaproxy:stable
+    container_name: fleetsec-zap
+    command: sleep 3600         # kept idle; the DAST job drives it via CLI
+    depends_on:
+      fleetsec-api:
+        condition: service_healthy
+    profiles: ["dast"]          # only starts with:  docker compose --profile dast up
