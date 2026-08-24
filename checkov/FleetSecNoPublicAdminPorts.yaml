@@ -1,0 +1,33 @@
+# FleetSec custom Checkov policy (YAML) — reliable CI guardrail.
+# Fails any aws_security_group that exposes SSH(22) or RDP(3389) to 0.0.0.0/0.
+# Complements built-in CKV_AWS_24 / CKV_AWS_25. The precise per-rule logic is
+# also implemented + unit-tested in checkov/fleetsec_sg_check.py.
+metadata:
+  id: "CKV2_FLEETSEC_1"
+  name: "SG must not expose SSH(22)/RDP(3389) to 0.0.0.0/0 [FleetSec]"
+  category: "NETWORKING"
+scope:
+  provider: "aws"
+definition:
+  or:
+    # Pass if no ingress rule opens to the whole internet, ...
+    - cond_type: "attribute"
+      resource_types:
+        - "aws_security_group"
+      attribute: "ingress.cidr_blocks"
+      operator: "not_contains"
+      value: "0.0.0.0/0"
+    # ... or if neither admin port appears in any ingress from_port.
+    - and:
+        - cond_type: "attribute"
+          resource_types:
+            - "aws_security_group"
+          attribute: "ingress.from_port"
+          operator: "not_contains"
+          value: 22
+        - cond_type: "attribute"
+          resource_types:
+            - "aws_security_group"
+          attribute: "ingress.from_port"
+          operator: "not_contains"
+          value: 3389
