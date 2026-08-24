@@ -1,0 +1,54 @@
+name: Break-Glass Emergency Override
+
+# Break-glass (D. Operación): an emergency deploy that bypasses a specific gate.
+# Controls enforced:
+#   1. Manual trigger only, with a mandatory justification.
+#   2. Runs in the protected `break-glass` Environment → requires TWO reviewers
+#      (configure Environment "Required reviewers" = 2, drawn from CODEOWNERS).
+#   3. Opens a CRITICAL, labeled audit issue capturing who/why/when.
+#   4. The whole event is retained in the Actions run history (audited).
+
+on:
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: 'Justification (incident ID + why the gate must be bypassed)'
+        required: true
+      gate:
+        description: 'Which gate is being bypassed'
+        required: true
+        type: choice
+        options: [sast, sca, dast, iac, image]
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  approve-and-audit:
+    runs-on: ubuntu-latest
+    environment: break-glass          # <-- gate: 2 required reviewers
+    steps:
+      - name: Record break-glass audit issue (CRITICAL)
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { reason, gate } = context.payload.inputs;
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `🚨 BREAK-GLASS override of '${gate}' gate by @${context.actor}`,
+              labels: ['security/critical', 'break-glass', 'audit'],
+              body: [
+                `**Actor:** @${context.actor}`,
+                `**Gate bypassed:** ${gate}`,
+                `**Reason:** ${reason}`,
+                `**Run:** ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+                `**UTC:** ${new Date().toISOString()}`,
+                '',
+                'Two code owners approved this override via the `break-glass` environment.',
+                'Post-incident review REQUIRED within 48h.'
+              ].join('\n')
+            });
+      - name: Proceed with emergency deploy
+        run: echo "Break-glass approved and audited. Emergency deploy step would run here."
