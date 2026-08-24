@@ -1,0 +1,108 @@
+openapi: 3.0.3
+info:
+  title: FleetSec Telemetry API (secure surface)
+  version: 1.0.0
+  description: >
+    Production (remediated) surface used by the authenticated DAST scan.
+    The /vuln lab surface is intentionally excluded from the OpenAPI contract.
+servers:
+  - url: http://localhost:3000
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+security:
+  - bearerAuth: []
+paths:
+  /health:
+    get:
+      security: []
+      summary: Liveness probe
+      responses: { '200': { description: ok } }
+  /secure/token:
+    post:
+      security: []
+      summary: Mint a short-lived HS256 token (test helper)
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties: { sub: { type: string } }
+      responses: { '200': { description: token } }
+  /secure/items:
+    get:
+      summary: Look up a user by integer id (parameterized)
+      parameters:
+        - { name: id, in: query, required: true, schema: { type: integer } }
+      responses: { '200': { description: ok }, '400': { description: bad input } }
+  /secure/account:
+    get:
+      summary: Current account from a verified JWT
+      responses: { '200': { description: ok }, '401': { description: unauthorized } }
+  /secure/fetch:
+    get:
+      summary: Fetch an allowlisted URL (SSRF-safe)
+      parameters:
+        - { name: url, in: query, required: true, schema: { type: string } }
+      responses: { '200': { description: ok }, '403': { description: blocked } }
+  /secure/xml:
+    post:
+      summary: Parse XML with external entities disabled
+      requestBody: { content: { application/xml: { schema: { type: string } } } }
+      responses: { '200': { description: ok }, '400': { description: rejected } }
+  /secure/users:
+    post:
+      summary: Create user (DTO allowlist, server sets role)
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string, format: email }
+                password: { type: string, minLength: 12 }
+      responses: { '201': { description: created }, '400': { description: invalid } }
+  /secure/download:
+    get:
+      summary: Download an allowlisted public file (traversal-safe)
+      parameters:
+        - { name: file, in: query, required: true, schema: { type: string } }
+      responses: { '200': { description: ok }, '400': { description: blocked } }
+  /secure/login:
+    post:
+      security: []
+      summary: Login (rate-limited)
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties: { user: { type: string }, pass: { type: string } }
+      responses: { '200': { description: ok }, '401': { description: bad creds }, '429': { description: throttled } }
+  /secure/register:
+    post:
+      summary: Register (PII masked in logs)
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email: { type: string }
+                cedula: { type: string }
+                phone: { type: string }
+      responses: { '201': { description: created } }
+  /secure/orders/{id}:
+    get:
+      summary: Get an order the caller owns (ownership check)
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      responses: { '200': { description: ok }, '403': { description: forbidden }, '404': { description: not found } }
+  /secure/debug/config:
+    get:
+      summary: Non-sensitive config health (no secrets)
+      responses: { '200': { description: ok } }
