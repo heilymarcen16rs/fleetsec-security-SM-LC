@@ -1,0 +1,47 @@
+title: IAM Administrator Policy Attached Outside Business Hours
+id: d9acfb54-2125-474c-a119-2d249c3e7ef1
+status: experimental
+description: |
+  Detects attachment of AdministratorAccess (or equivalent broad admin policy) to
+  an IAM user/role/group outside business hours (00:00-06:00 UTC). In the FleetSec
+  breach, svc-monitoring received AdministratorAccess via AttachUserPolicy at
+  T+00:22. There is no legitimate reason to grant admin to a service user off-hours.
+references:
+  - https://attack.mitre.org/techniques/T1098/001/
+  - https://docs.aws.amazon.com/IAM/latest/UserGuide/access-analyzer.html
+author: FleetSec Security Engineering (candidate)
+date: 2026/08/23
+tags:
+  - attack.persistence
+  - attack.privilege_escalation
+  - attack.t1098.001
+logsource:
+  product: aws
+  service: cloudtrail
+detection:
+  iam_attach:
+    eventSource: iam.amazonaws.com
+    eventName:
+      - AttachUserPolicy
+      - AttachRolePolicy
+      - AttachGroupPolicy
+      - PutUserPolicy
+      - PutRolePolicy
+  admin_policy:
+    - requestParameters.policyArn|contains: ':policy/AdministratorAccess'
+    - requestParameters.policyArn|contains: ':policy/PowerUserAccess'
+    - requestParameters.policyDocument|contains: '"Action":"*"'
+    - requestParameters.policyDocument|contains: '"Action": "*"'
+  off_hours:
+    eventTime|re: 'T(0[0-5]):'   # 00:00-05:59 UTC
+  condition: iam_attach and admin_policy and off_hours
+falsepositives:
+  - Scheduled automation during a maintenance window — exclude its principal explicitly
+  - On-call admin responding to an incident — correlate with the change/on-call calendar
+fields:
+  - userIdentity.arn
+  - sourceIPAddress
+  - requestParameters.userName
+  - requestParameters.policyArn
+  - userAgent
+level: high

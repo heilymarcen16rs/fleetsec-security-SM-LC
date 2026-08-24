@@ -1,0 +1,38 @@
+title: Bulk S3 GetObject From Single IAM User (Exfiltration)
+id: fe8ac783-2f4c-4909-8082-59dab8672475
+status: experimental
+description: |
+  Detects a single IAM principal performing high-volume reads against one S3 bucket
+  in a short window — the FleetSec exfiltration pattern (387 GetObject / 8 min on
+  fleetpay-prod-drivers, 45.7 GB, at T+00:35). Bonus rule requested by the brief.
+  The aggregation syntax is backend-specific; verify on your SIEM (Splunk/Sentinel/
+  OpenSearch) and translate with `sigma convert`.
+references:
+  - https://attack.mitre.org/techniques/T1530/
+  - https://attack.mitre.org/techniques/T1567/002/
+author: FleetSec Security Engineering (candidate)
+date: 2026/08/23
+tags:
+  - attack.collection
+  - attack.exfiltration
+  - attack.t1530
+logsource:
+  product: aws
+  service: cloudtrail
+detection:
+  s3_read:
+    eventSource: s3.amazonaws.com
+    eventName:
+      - GetObject
+      - CopyObject
+  timeframe: 5m
+  condition: s3_read | count() by userIdentity.arn, requestParameters.bucketName > 100
+falsepositives:
+  - Backup jobs — exclude known automation principals
+  - Data pipeline tasks (Glue / EMR) — exclude their roles
+  - Legitimate analytics exports through approved paths
+fields:
+  - userIdentity.arn
+  - requestParameters.bucketName
+  - sourceIPAddress
+level: high

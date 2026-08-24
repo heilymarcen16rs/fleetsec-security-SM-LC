@@ -1,0 +1,39 @@
+title: CloudTrail Tampering / DeleteTrail Attempt (Anti-Forensics)
+id: 5678151f-dd18-409e-931a-66c74e09afda
+status: stable
+description: |
+  Adversaries stop or delete CloudTrail to remove evidence. In the FleetSec breach
+  a DeleteTrail call was attempted at T+01:45 and BLOCKED by an SCP. Both successful
+  and failed (access-denied) attempts must alert — a failed attempt is still a
+  high-confidence indicator of an active intruder.
+references:
+  - https://attack.mitre.org/techniques/T1562/008/
+  - https://attack.mitre.org/techniques/T1070/
+author: FleetSec Security Engineering (candidate)
+date: 2026/08/23
+tags:
+  - attack.defense_evasion
+  - attack.t1562.008
+  - attack.t1070
+logsource:
+  product: aws
+  service: cloudtrail
+detection:
+  selection:
+    eventSource: cloudtrail.amazonaws.com
+    eventName:
+      - DeleteTrail
+      - StopLogging
+      - UpdateTrail
+      - PutEventSelectors
+  condition: selection
+falsepositives:
+  - Planned trail migration — must reference an approved change ticket
+fields:
+  - userIdentity.arn
+  - sourceIPAddress
+  - eventName
+  - requestParameters.name
+  - errorCode
+  - errorMessage
+level: critical

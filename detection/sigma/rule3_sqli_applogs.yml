@@ -1,0 +1,41 @@
+title: SQL Injection Patterns in Web Request Parameters
+id: ccee97d0-6a06-4e08-9c22-34ef8831b14b
+status: experimental
+description: |
+  Detects classic SQLi payloads in HTTP query strings or POST bodies against the
+  FleetSec telemetry API. Maps to finding V-01 (CWE-89). Pair with rate-limit
+  detection: one hit may be a scanner; many in a short window is targeted
+  exploitation. Exclude the /vuln lab hostname in non-production.
+references:
+  - https://owasp.org/www-community/attacks/SQL_Injection
+  - https://attack.mitre.org/techniques/T1190/
+author: FleetSec Security Engineering (candidate)
+date: 2026/08/23
+tags:
+  - attack.initial_access
+  - attack.t1190
+logsource:
+  category: webserver
+detection:
+  sqli_payloads:
+    cs-uri-query|contains:
+      - "' or '1'='1"
+      - "' or 1=1--"
+      - 'union select'
+      - '; drop table'
+      - ' sleep('
+      - ' benchmark('
+      - 'extractvalue('
+      - 'updatexml('
+      - '/**/'
+  condition: sqli_payloads
+falsepositives:
+  - Security training environments (DVWA, Juice Shop) — exclude these hostnames
+  - Legitimate search text that happens to contain "or" — require a second token
+  - Authorized penetration tests — coordinate with the red-team window
+fields:
+  - c-ip
+  - cs-uri-stem
+  - cs-uri-query
+  - cs-username
+level: high
