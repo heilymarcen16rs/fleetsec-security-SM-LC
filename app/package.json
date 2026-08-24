@@ -1,0 +1,29 @@
+{
+  "name": "fleetsec-telemetry-api",
+  "version": "1.0.0",
+  "description": "FleetSec minimal telemetry API — deliberately vulnerable lab (/vuln) + remediated endpoints (/secure) for VAPT and DevSecOps demonstration.",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "test": "node --test tests/vapt.poc.test.js tests/remediation.test.js",
+    "test:vapt": "node --test tests/vapt.poc.test.js",
+    "test:remediation": "node --test tests/remediation.test.js"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "express-rate-limit": "^7.5.0",
+    "fast-xml-parser": "^4.5.1",
+    "helmet": "^8.0.0",
+    "joi": "^17.13.3",
+    "jsonwebtoken": "^9.0.2",
+    "pino": "^9.6.0",
+    "sql.js": "^1.12.0"
+  },
+  "devDependencies": {
+    "supertest": "^7.0.0"
+  }
+}
