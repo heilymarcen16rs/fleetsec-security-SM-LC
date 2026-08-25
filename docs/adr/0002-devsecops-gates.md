@@ -1,24 +1,27 @@
-# ADR-0002 — DevSecOps quality gates and thresholds
+# ADR-0002 — Puertas de calidad y umbrales de DevSecOps
 
-- **Status:** Accepted · **Date:** 2026-08-23 · **Deciders:** Security Engineering
+- **Estado:** Aceptado · **Fecha:** 2026-08-23 · **Responsable:** Ingeniería de Seguridad
 
-## Context
-The pipeline must enforce hard gates (SAST, SCA, DAST, container, IaC, secrets) yet the
-repo intentionally contains a vulnerable lab. A naive "0 findings" gate would either
-fail permanently or force us to delete the teaching material.
+## Contexto
+El pipeline debe imponer puertas estrictas (SAST, SCA, DAST, contenedor, IaC, secretos),
+pero el repositorio contiene de forma intencionada un laboratorio vulnerable. Una puerta
+ingenua de «0 hallazgos» fallaría de forma permanente o nos obligaría a eliminar el
+material didáctico.
 
-## Decision
-Two-tier SAST: an **informational** Semgrep run over the whole repo (shows the custom
-rules firing, non-blocking) plus a **blocking** gate over production code only
-(`app/src`, excluding `vulnerable.js` and tests), with inline `nosemgrep`
-suppressions carrying `razón · fecha · responsable` for the V-10 lab secret.
-Thresholds: SCA blocks HIGH/CRITICAL (≈ CVSS ≥8 direct / ≥9 indirect), container
-blocks CRITICAL, DAST HIGH/CRITICAL block + MEDIUM opens a `security/medium` issue,
-Checkov hard-fails (built-in CKV_AWS_24/25 enforce the admin-port rule). Independent
-jobs run in parallel with npm/Trivy caches to stay ≤15 min.
+## Decisión
+SAST de dos niveles: una ejecución **informativa** de Semgrep sobre todo el repositorio
+(muestra las reglas personalizadas activándose, no bloqueante) más una puerta
+**bloqueante** solo sobre el código de producción (`app/src`, excluyendo `vulnerable.js`
+y las pruebas), con supresiones `nosemgrep` en línea que incluyen `razón · fecha ·
+responsable` para el secreto de laboratorio V-10.
+Umbrales: SCA bloquea HIGH/CRITICAL (≈ CVSS ≥8 directo / ≥9 indirecto), el contenedor
+bloquea CRITICAL, DAST bloquea HIGH/CRITICAL + MEDIUM abre una incidencia
+`security/medium`, Checkov falla de forma estricta (los controles integrados
+CKV_AWS_24/25 imponen la regla del puerto de administración). Los jobs independientes se
+ejecutan en paralelo con cachés de npm/Trivy para mantenerse ≤15 min.
 
-## Consequences
-- (+) Gate reflects real production risk; suppressions are auditable (mirrors the required SAST discipline).
-- (+) Custom rules are still demonstrably exercised.
-- (+) Parallel fan-out + caching meets the ≤15-min SLA.
-- (−) The exclusion list must be reviewed so it never hides a real production finding — owned by SecOps in CODEOWNERS.
+## Consecuencias
+- (+) La puerta refleja el riesgo real de producción; las supresiones son auditables (replica la disciplina SAST exigida).
+- (+) Las reglas personalizadas siguen ejercitándose de forma demostrable.
+- (+) El fan-out en paralelo + el cacheo cumplen el SLA de ≤15 min.
+- (−) La lista de exclusiones debe revisarse para que nunca oculte un hallazgo real de producción — bajo responsabilidad de SecOps en CODEOWNERS.

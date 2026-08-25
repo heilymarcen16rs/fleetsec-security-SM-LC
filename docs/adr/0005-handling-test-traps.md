@@ -1,34 +1,36 @@
-# ADR-0005 — Handling the "traps" embedded in the test requirements
+# ADR-0005 — Gestión de las «trampas» embebidas en los requisitos de la prueba
 
-- **Status:** Accepted · **Date:** 2026-08-23 · **Deciders:** Security Engineering
+- **Estado:** Aceptado · **Fecha:** 2026-08-23 · **Responsable:** Ingeniería de Seguridad
 
-## Context
-Several requirements are deliberately worded to tempt an insecure or non-compliant
-implementation. A senior engineer must detect them and correct rather than comply
-blindly. This ADR records each trap and the professional decision taken. Full analysis
-in `README.md` §"Análisis crítico y trampas".
+## Contexto
+Varios requisitos están redactados deliberadamente para tentar a una implementación
+insegura o no conforme. Una ingeniera sénior debe detectarlos y corregir en lugar de
+cumplir a ciegas. Este ADR registra cada trampa y la decisión profesional adoptada.
+Análisis completo en `README.md` §"Análisis crítico y trampas".
 
-## Decision (trap → resolution)
-1. **KMS "key policy sin Principal AWS *"** — a wildcard `Principal:"*"` on a key policy
-   is dangerous. We used the account-root admin statement + scoped service principals
-   (never `Principal:"*"`). See `kms.tf`.
-2. **SG "0.0.0.0/0 excepto 80/443 en ALB"** — only the ALB SG exposes 0.0.0.0/0, only on
-   80 (redirect) and 443; admin ports never. Enforced by CKV_AWS_24/25.
-3. **RDS `ssl=1` / `log_connections=1`** — implemented via a parameter group
-   (`rds.force_ssl=1`, `log_connections=1`), plus IAM auth and no public endpoint.
+## Decisión (trampa → resolución)
+1. **KMS "key policy sin Principal AWS *"** — un comodín `Principal:"*"` en una política
+   de clave es peligroso. Usamos la sentencia de administración con el root de la cuenta +
+   principales de servicio acotados (nunca `Principal:"*"`). Véase `kms.tf`.
+2. **SG "0.0.0.0/0 excepto 80/443 en ALB"** — solo el SG del ALB expone 0.0.0.0/0,
+   únicamente en el 80 (redirección) y el 443; los puertos de administración nunca.
+   Impuesto por CKV_AWS_24/25.
+3. **RDS `ssl=1` / `log_connections=1`** — implementado mediante un parameter group
+   (`rds.force_ssl=1`, `log_connections=1`), más autenticación IAM y sin endpoint público.
 4. **V-10 "migrar a variable de entorno o gestor de secretos — nunca mover a otro
-   archivo del repo"** — moving a secret to another repo file is the trap; we removed it
-   to env/Secrets Manager. See `secure.js` / `rds.tf`.
-5. **DAST "cobertura ≥80% del OpenAPI"** — we ship an OpenAPI spec of the *secure*
-   surface so ZAP has a real contract to authenticate against.
-6. **Break-glass** — must be audited: 2 reviewers via a protected Environment + an
-   auto-opened CRITICAL issue on every override (`break-glass.yml`).
-7. **AI report** — must **admit** at least one AI hallucination; hiding it scores zero.
-   Documented honestly in `docs/ai-report.md`.
-8. **`svc-monitoring` service account with console login** — service accounts must not
-   have console access; the IR plan revokes it and the P1 backlog adds an SCP.
+   archivo del repo"** — mover un secreto a otro archivo del repositorio es la trampa; lo
+   trasladamos a variable de entorno/Secrets Manager. Véase `secure.js` / `rds.tf`.
+5. **DAST "cobertura ≥80% del OpenAPI"** — publicamos una especificación OpenAPI de la
+   superficie *segura* para que ZAP tenga un contrato real contra el cual autenticarse.
+6. **Break-glass** — debe auditarse: 2 revisores mediante un Environment protegido + una
+   incidencia CRITICAL abierta automáticamente en cada override (`break-glass.yml`).
+7. **Informe de IA** — debe **admitir** al menos una alucinación de la IA; ocultarla
+   puntúa cero. Documentado con honestidad en `docs/ai-report.md`.
+8. **Cuenta de servicio `svc-monitoring` con acceso por consola** — las cuentas de
+   servicio no deben tener acceso por consola; el plan de IR lo revoca y el backlog P1
+   añade una SCP.
 
-## Consequences
-- (+) Demonstrates security judgment over literal compliance — the core of the evaluation.
-- (+) Each correction is traceable to code/evidence.
-- (−) A reviewer expecting literal compliance may need the rationale — hence this ADR and the README section.
+## Consecuencias
+- (+) Demuestra criterio de seguridad por encima del cumplimiento literal — el núcleo de la evaluación.
+- (+) Cada corrección es trazable hasta el código/la evidencia.
+- (−) Un revisor que espere cumplimiento literal puede necesitar la justificación — de ahí este ADR y la sección del README.

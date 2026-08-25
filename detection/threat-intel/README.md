@@ -1,29 +1,29 @@
-# Threat Intelligence — FleetSec Breach INC-2026-001
+# Inteligencia de Amenazas — Brecha FleetSec INC-2026-001
 
-## A. Indicators of Compromise (IOCs) — extracted from the timeline
+## A. Indicadores de Compromiso (IOCs) — extraídos de la cronología
 
-| # | Type | Indicator | First seen (UTC) | Context in this incident |
+| # | Tipo | Indicador | Primera detección (UTC) | Contexto en este incidente |
 |---|------|-----------|------------------|--------------------------|
-| 1 | IPv4 | `185.220.101.22` | T+00:00 | Console login source (Tor) **and** exfil destination (T+01:10) |
-| 2 | IAM user | `svc-monitoring` | T+00:15 | Service account abused; CreateLoginProfile → AttachUserPolicy admin |
-| 3 | Docker image | `docker.io/attacker/exfil:latest` | T+01:40 | Malicious task registered in ECS (`RegisterTaskDefinition`) |
-| 4 | EC2 instance | `i-0abc1234def56789` | T+01:50 | GuardDuty `Trojan:EC2/DNSDataExfiltration` |
-| 5 | Internal IP | `10.0.2.45` | T+01:10 | Compromised host, source of 49 GB outbound in VPC Flow Logs |
-| 6 | KMS key | `prod-data-key` | T+00:58 | 12× `kms:Decrypt` to read encrypted driver data |
-| 7 | S3 bucket | `fleetpay-prod-drivers` | T+00:35 | 387× GetObject / 8 min → 45.7 GB exfiltrated |
-| 8 | ASN | `AS213151` | T+00:00 | Owner of 185.220.101.22 (Tor infrastructure) |
+| 1 | IPv4 | `185.220.101.22` | T+00:00 | Origen del inicio de sesión en consola (Tor) **y** destino de exfiltración (T+01:10) |
+| 2 | Usuario IAM | `svc-monitoring` | T+00:15 | Cuenta de servicio abusada; CreateLoginProfile → AttachUserPolicy admin |
+| 3 | Imagen Docker | `docker.io/attacker/exfil:latest` | T+01:40 | Tarea maliciosa registrada en ECS (`RegisterTaskDefinition`) |
+| 4 | Instancia EC2 | `i-0abc1234def56789` | T+01:50 | GuardDuty `Trojan:EC2/DNSDataExfiltration` |
+| 5 | IP interna | `10.0.2.45` | T+01:10 | Host comprometido, origen de 49 GB salientes en los VPC Flow Logs |
+| 6 | Clave KMS | `prod-data-key` | T+00:58 | 12× `kms:Decrypt` para leer datos cifrados de conductores |
+| 7 | Bucket S3 | `fleetpay-prod-drivers` | T+00:35 | 387× GetObject / 8 min → 45.7 GB exfiltrados |
+| 8 | ASN | `AS213151` | T+00:00 | Propietario de 185.220.101.22 (infraestructura Tor) |
 
-### Behavioral patterns (higher on the Pyramid of Pain — prefer these detections)
-- **Volume/velocity**: 387 S3 GetObject in 8 min (~48/min) against a single bucket by one principal.
-- **Timing**: privilege escalation (AttachUserPolicy admin) at off-hours.
-- **Sequence**: ConsoleLogin(Tor) → CreateLoginProfile → AttachUserPolicy → bulk GetObject → kms:Decrypt → egress → RegisterTaskDefinition(attacker image) → DeleteTrail → DNS exfil.
+### Patrones de comportamiento (más arriba en la Pirámide del Dolor — preferir estas detecciones)
+- **Volumen/velocidad**: 387 GetObject de S3 en 8 min (~48/min) contra un único bucket por un solo principal.
+- **Momento**: escalada de privilegios (AttachUserPolicy admin) fuera de horario.
+- **Secuencia**: ConsoleLogin(Tor) → CreateLoginProfile → AttachUserPolicy → GetObject masivo → kms:Decrypt → salida → RegisterTaskDefinition(imagen del atacante) → DeleteTrail → exfiltración DNS.
 
-## Enrichment (VirusTotal / AbuseIPDB / Shodan / MISP-OTX — free tier)
+## Enriquecimiento (VirusTotal / AbuseIPDB / Shodan / MISP-OTX — capa gratuita)
 
-> Run the commands below with your own free-tier API keys. Expected profile for
-> `185.220.101.22` is a **known Tor exit node** (AS213151, Hetzner-adjacent Tor
-> infra), historically flagged for abuse — high-confidence malicious for a
-> production admin login.
+> Ejecute los comandos siguientes con sus propias claves de API de capa gratuita. El perfil
+> esperado para `185.220.101.22` es un **nodo de salida Tor conocido** (AS213151,
+> infraestructura Tor adyacente a Hetzner), históricamente señalado por abuso — malicioso
+> con alta confianza para un inicio de sesión de administración en producción.
 
 ```bash
 # AbuseIPDB (free tier)
@@ -42,30 +42,30 @@ curl -s "https://api.shodan.io/shodan/host/185.220.101.22?key=$SHODAN_KEY" | jq 
 curl -s https://check.torproject.org/torbulkexitlist | grep -x 185.220.101.22 && echo "CONFIRMED Tor exit node"
 ```
 
-Record results in this table:
+Registre los resultados en esta tabla:
 
-| Source | Verdict | Score / detail |
+| Fuente | Veredicto | Puntaje / detalle |
 |--------|---------|----------------|
-| AbuseIPDB | (fill) | confidence __ / isTor: true |
-| VirusTotal | (fill) | malicious __ / AS213151 |
-| Shodan | (fill) | org / open ports |
-| Tor exit list | Confirmed Tor exit | — |
+| AbuseIPDB | (completar) | confidence __ / isTor: true |
+| VirusTotal | (completar) | malicious __ / AS213151 |
+| Shodan | (completar) | org / puertos abiertos |
+| Lista de salidas Tor | Salida Tor confirmada | — |
 
-## B. Load the IOCs into GuardDuty (Threat Intel Set)
+## B. Cargar los IOCs en GuardDuty (Threat Intel Set)
 
-The IOC file `fleetsec-iocs.txt` (one IP per line) is deployed two ways.
+El archivo de IOCs `fleetsec-iocs.txt` (una IP por línea) se despliega de dos maneras.
 
-### Option 1 — Terraform (preferred, in-repo, auditable)
-Already wired in `terraform/environments/prod/main.tf`:
-`aws_s3_object.threat_intel` uploads the file to the immutable logs bucket and
-`aws_guardduty_threatintelset.fleetsec` registers it. Apply with:
+### Opción 1 — Terraform (preferido, en el repositorio, auditable)
+Ya está conectado en `terraform/environments/prod/main.tf`:
+`aws_s3_object.threat_intel` sube el archivo al bucket de logs inmutable y
+`aws_guardduty_threatintelset.fleetsec` lo registra. Aplique con:
 
 ```bash
 cd terraform/environments/prod
 terraform apply -target=aws_guardduty_threatintelset.fleetsec
 ```
 
-### Option 2 — AWS CLI (manual / emergency)
+### Opción 2 — AWS CLI (manual / emergencia)
 ```bash
 DETECTOR_ID=$(aws guardduty list-detectors --query 'DetectorIds[0]' --output text)
 BUCKET=fleetsec-logs-<account_id>
@@ -85,6 +85,6 @@ aws guardduty create-threat-intel-set \
 aws guardduty list-threat-intel-sets --detector-id "$DETECTOR_ID"
 ```
 
-Any future GuardDuty finding whose remote IP matches the set is raised as
-`UnauthorizedAccess:*/MaliciousIPCaller.Custom` and routed to SNS (see
-`monitoring.tf` EventBridge rule for severity ≥ 7).
+Cualquier hallazgo futuro de GuardDuty cuya IP remota coincida con el conjunto se genera como
+`UnauthorizedAccess:*/MaliciousIPCaller.Custom` y se enruta a SNS (véase la regla de
+EventBridge en `monitoring.tf` para severidad ≥ 7).

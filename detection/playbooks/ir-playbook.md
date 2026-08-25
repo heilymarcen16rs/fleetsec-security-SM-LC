@@ -1,34 +1,34 @@
-# Incident Response Playbook — INC-2026-001 (FleetSec Active Breach)
+# Playbook de Respuesta a Incidentes — INC-2026-001 (Brecha Activa de FleetSec)
 
-**Framework:** NIST SP 800-61r2 · **Severity:** SEV-1 (active data exfiltration, admin compromise)
-**Detection:** GuardDuty + CloudTrail · **Status at T+02:00:** breach active ~2h · **PII involved:** YES (Ley 1581)
+**Framework:** NIST SP 800-61r2 · **Severidad:** SEV-1 (exfiltración activa de datos, compromiso de admin)
+**Detección:** GuardDuty + CloudTrail · **Estado en T+02:00:** brecha activa ~2h · **PII involucrada:** SÍ (Ley 1581)
 
-> Sequence is non-negotiable: **preserve evidence → contain → eradicate → recover → lessons learned.**
+> La secuencia es innegociable: **preservar evidencia → contener → erradicar → recuperar → lecciones aprendidas.**
 
 ---
 
-## 0. Timeline reconstructed (from the embedded indicators)
+## 0. Cronología reconstruida (a partir de los indicadores embebidos)
 
-| UTC | Action | Technique |
+| UTC | Acción | Técnica |
 |-----|--------|-----------|
-| T+00:00 | Console login from `185.220.101.22` (Tor) as IAMUser | T1078.004 |
-| T+00:15 | `CreateLoginProfile` on `svc-monitoring` | T1098 |
+| T+00:00 | Inicio de sesión en consola desde `185.220.101.22` (Tor) como IAMUser | T1078.004 |
+| T+00:15 | `CreateLoginProfile` en `svc-monitoring` | T1098 |
 | T+00:22 | `AttachUserPolicy` AdministratorAccess → svc-monitoring | T1098.001 / T1548 |
-| T+00:35 | 387× `s3:GetObject` / 8 min on `fleetpay-prod-drivers` (45.7 GB) | T1530 |
-| T+00:58 | 12× `kms:Decrypt` on `prod-data-key` | T1530 |
-| T+01:10 | 10.0.2.45 → 185.220.101.22:443, 49 GB outbound | T1567.002 |
-| T+01:40 | `RegisterTaskDefinition` with `docker.io/attacker/exfil:latest` | T1610 |
-| T+01:45 | `DeleteTrail` — **BLOCKED by SCP** | T1562.008 |
-| T+01:50 | GuardDuty `Trojan:EC2/DNSDataExfiltration` on i-0abc1234def56789 | T1071.004 |
+| T+00:35 | 387× `s3:GetObject` / 8 min sobre `fleetpay-prod-drivers` (45.7 GB) | T1530 |
+| T+00:58 | 12× `kms:Decrypt` sobre `prod-data-key` | T1530 |
+| T+01:10 | 10.0.2.45 → 185.220.101.22:443, 49 GB salientes | T1567.002 |
+| T+01:40 | `RegisterTaskDefinition` con `docker.io/attacker/exfil:latest` | T1610 |
+| T+01:45 | `DeleteTrail` — **BLOQUEADO por SCP** | T1562.008 |
+| T+01:50 | GuardDuty `Trojan:EC2/DNSDataExfiltration` en i-0abc1234def56789 | T1071.004 |
 
 ---
 
-## 1. Containment — exact AWS CLI (run top-to-bottom)
+## 1. Contención — AWS CLI exacto (ejecutar de arriba a abajo)
 
-> Preserve evidence BEFORE any destructive/network change. Never `stop` an
-> instance before memory acquisition. Every command is reversible where noted.
+> Preserve la evidencia ANTES de cualquier cambio destructivo/de red. Nunca haga `stop` de
+> una instancia antes de la adquisición de memoria. Todo comando es reversible donde se indica.
 
-### Step 1 — Revoke credentials of the compromised IAM user
+### Paso 1 — Revocar las credenciales del usuario IAM comprometido
 ```bash
 USER=svc-monitoring
 # Inventory keys first (evidence)
@@ -40,9 +40,9 @@ done
 # Kill console access (the attacker created a login profile at T+00:15)
 aws iam delete-login-profile --user-name "$USER" || true
 ```
-**Rollback:** re-activate keys / recreate login profile.
+**Rollback:** reactivar las claves / recrear el login profile.
 
-### Step 2 — Revoke already-issued STS sessions (stolen tokens)
+### Paso 2 — Revocar las sesiones STS ya emitidas (tokens robados)
 ```bash
 cat > /tmp/revoke.json <<'EOF'
 { "Version": "2012-10-17",
@@ -55,10 +55,10 @@ aws iam put-user-policy --user-name svc-monitoring \
 aws iam detach-user-policy --user-name svc-monitoring \
   --policy-arn arn:aws:iam::aws:policy/AdministratorAccess
 ```
-`aws:TokenIssueTime` is the canonical way to invalidate live STS tokens immediately.
+`aws:TokenIssueTime` es la forma canónica de invalidar de inmediato los tokens STS vivos.
 **Rollback:** `aws iam delete-user-policy --user-name svc-monitoring --policy-name RevokeSessionsTokenIssueBefore`
 
-### Step 3 — Revoke sessions & isolate the compromised EC2 (evidence first)
+### Paso 3 — Revocar sesiones y aislar la EC2 comprometida (primero la evidencia)
 ```bash
 INSTANCE_ID=i-0abc1234def56789
 mkdir -p ir-evidence
@@ -77,7 +77,7 @@ aws ec2 modify-instance-attribute --instance-id $INSTANCE_ID --groups sg-quarant
 ```
 **Rollback:** `aws ec2 modify-instance-attribute --instance-id $INSTANCE_ID --groups sg-app-original`
 
-### Step 4 — Preserve CloudTrail / S3 / Flow-Log evidence (Write-Once)
+### Paso 4 — Preservar la evidencia de CloudTrail / S3 / Flow-Log (Write-Once)
 ```bash
 aws s3 cp s3://fleetsec-cloudtrail-logs/AWSLogs/<acct>/CloudTrail/us-east-1/2026/08/23/ \
   s3://fleetsec-logs-<acct>/INC-2026-001/cloudtrail/ --recursive   # Object Lock COMPLIANCE bucket
@@ -89,7 +89,7 @@ aws logs start-query --log-group-name /fleetsec/vpc/flowlogs \
   --query-string 'fields @timestamp, srcAddr, dstAddr, bytes | filter srcAddr like /10.0.2.45/ | sort bytes desc'
 ```
 
-### Step 5 — Block the attacker IP at WAF + quarantine the malicious ECS task
+### Paso 5 — Bloquear la IP del atacante en el WAF + poner en cuarentena la tarea ECS maliciosa
 ```bash
 # Add to WAF IP set (immediate edge block)
 aws wafv2 update-ip-set --name blocklist-ir --scope REGIONAL --id $IPSET_ID \
@@ -103,98 +103,98 @@ aws ecs deregister-task-definition --task-definition $(aws ecs list-task-definit
 
 ---
 
-## 2. MITRE ATT&CK v14 mapping (≥6 techniques)
+## 2. Mapeo MITRE ATT&CK v14 (≥6 técnicas)
 
-| Technique ID | Name | Tactic | Manifestation here | Mitigation (D3FEND) |
+| ID de técnica | Nombre | Táctica | Manifestación aquí | Mitigación (D3FEND) |
 |--------------|------|--------|--------------------|---------------------|
-| T1078.004 | Valid Accounts: Cloud | Initial Access / Persistence | Console login from Tor with valid IAM creds | Enforce MFA (D3-MFA); conditional access; deny Tor at WAF |
-| T1098 / T1098.001 | Account Manipulation: Additional Cloud Creds | Persistence | `CreateLoginProfile` + admin attach on svc-monitoring | SCP denying IAM mods to service users (D3-AM) |
-| T1548 | Abuse Elevation Control | Privilege Escalation | AttachUserPolicy AdministratorAccess | Least-privilege baseline; IAM Access Analyzer |
-| T1530 | Data from Cloud Storage | Collection | 387× GetObject + 12× kms:Decrypt on driver data | S3 bucket policy w/ VPC-endpoint condition; CMK grants |
-| T1567.002 | Exfiltration to Cloud/Web | Exfiltration | 45.7 GB → 185.220.101.22:443 | VPC egress firewall / NetFw allowlist (D3-OEC) |
-| T1610 | Deploy Container | Execution | RegisterTaskDefinition w/ attacker image | ECR-only image policy; admission control on image origin |
-| T1562.008 | Impair Defenses: Disable Cloud Logs | Defense Evasion | DeleteTrail (blocked by SCP) | SCP DeleteTrail deny (worked); alert on attempt |
-| T1071.004 | App Layer Protocol: DNS | C2 / Exfil | GuardDuty DNS exfil on i-0abc… | Route53 Resolver DNS Firewall |
+| T1078.004 | Valid Accounts: Cloud | Initial Access / Persistence | Inicio de sesión en consola desde Tor con credenciales IAM válidas | Imponer MFA (D3-MFA); acceso condicional; denegar Tor en el WAF |
+| T1098 / T1098.001 | Account Manipulation: Additional Cloud Creds | Persistence | `CreateLoginProfile` + asignación de admin en svc-monitoring | SCP que deniega modificaciones IAM a usuarios de servicio (D3-AM) |
+| T1548 | Abuse Elevation Control | Privilege Escalation | AttachUserPolicy AdministratorAccess | Línea base de mínimo privilegio; IAM Access Analyzer |
+| T1530 | Data from Cloud Storage | Collection | 387× GetObject + 12× kms:Decrypt sobre datos de conductores | Bucket policy de S3 con condición de VPC-endpoint; grants de CMK |
+| T1567.002 | Exfiltration to Cloud/Web | Exfiltration | 45.7 GB → 185.220.101.22:443 | Firewall de salida de VPC / allowlist de NetFw (D3-OEC) |
+| T1610 | Deploy Container | Execution | RegisterTaskDefinition con imagen del atacante | Política de imágenes solo desde ECR; control de admisión sobre el origen de la imagen |
+| T1562.008 | Impair Defenses: Disable Cloud Logs | Defense Evasion | DeleteTrail (bloqueado por SCP) | SCP que deniega DeleteTrail (funcionó); alerta ante el intento |
+| T1071.004 | App Layer Protocol: DNS | C2 / Exfil | Exfiltración DNS de GuardDuty en i-0abc… | Route53 Resolver DNS Firewall |
 
 ---
 
-## 3. Root Cause Analysis (5 Whys + Swiss Cheese)
+## 3. Análisis de Causa Raíz (5 Porqués + Queso Suizo)
 
-**5 Whys**
-1. *Why was 45.7 GB of PII exfiltrated?* svc-monitoring had AdministratorAccess.
-2. *Why did it get admin?* `AttachUserPolicy` succeeded for a service user.
-3. *Why did that succeed?* No SCP prevented IAM modification of service users by non-IAM-admin principals.
-4. *Why no such SCP?* The Org SCP baseline was never reviewed after the single-account → org migration.
-5. *Why never reviewed?* No periodic compliance-review process existed.
+**5 Porqués**
+1. *¿Por qué se exfiltraron 45.7 GB de PII?* svc-monitoring tenía AdministratorAccess.
+2. *¿Por qué obtuvo admin?* `AttachUserPolicy` tuvo éxito para un usuario de servicio.
+3. *¿Por qué tuvo éxito?* Ninguna SCP impedía la modificación IAM de usuarios de servicio por parte de principales que no son administradores de IAM.
+4. *¿Por qué no existía esa SCP?* La línea base de SCP de la organización nunca se revisó tras la migración de cuenta única → organización.
+5. *¿Por qué nunca se revisó?* No existía un proceso periódico de revisión de cumplimiento.
 
-**Real root cause:** a missing *process* (periodic control review), not just a missing policy.
+**Causa raíz real:** un *proceso* ausente (revisión periódica de controles), no solo una política ausente.
 
-**Swiss-cheese — layers that should have stopped this:**
-- MFA on IAM console users: ❌ not enforced (login from Tor succeeded)
-- IP/geo allowlist on console: ❌ not enforced (Tor exit reached the console)
-- SCP on IAM mods to service users: ❌ absent
-- GuardDuty UnauthorizedAccess: ✅ fired — but reaction was too slow (2h)
-- SCP on DeleteTrail: ✅ blocked anti-forensics
-- VPC egress firewall: ❌ absent (49 GB left unimpeded)
-- CMK grants scoped to workloads: ❌ svc-monitoring could Decrypt prod-data-key
-
----
-
-## 4. Executive summary for the CEO (≤1 page, no jargon)
-
-**Incident INC-2026-001 — Data breach brief**
-**For:** CEO & executive team · **From:** Security Engineering · **Status:** Contained · **Date:** 2026-08-23
-
-**What happened.** An attacker logged in through an anonymity network using the
-credentials of an internal service account, granted that account full
-administrator rights, and copied a large volume of driver data out of our systems
-over roughly two hours before we cut off access.
-
-**What was affected.**
-- Data: driver personal data (names, national IDs, vehicle plates, GPS positions).
-- Approximate scale: ~45.7 GB from the `fleetpay-prod-drivers` store.
-- Duration: ~2 hours from first access to containment.
-- Systems: one processing server and one data bucket; core service stayed online.
-
-**Regulatory impact.**
-- **Ley 1581:** notification to the SIC is required within **15 business days** of
-  detection. Target submission: **2026-09-12**. Affected data subjects likely
-  require direct notice (high risk to their rights).
-- Keep the incident record for at least 5 years.
-
-**Three immediate actions.**
-1. Enforce MFA + block anonymity networks on all admin access — SecOps, 48h.
-2. Add guardrails so a service account can never be granted admin — SecOps, 72h.
-3. Turn on outbound traffic controls so bulk data cannot leave — Networks, 7 days.
-
-**Estimated impact.** Direct (forensics, legal, notification) + regulatory
-exposure up to **2,000 SMMLV** under Ley 1581 + reputational. Range to be refined
-after forensic scoping.
+**Queso suizo — capas que deberían haber detenido esto:**
+- MFA en usuarios de consola IAM: ❌ no impuesta (el inicio de sesión desde Tor tuvo éxito)
+- Allowlist de IP/geo en la consola: ❌ no impuesta (el nodo de salida Tor alcanzó la consola)
+- SCP sobre modificaciones IAM a usuarios de servicio: ❌ ausente
+- GuardDuty UnauthorizedAccess: ✅ se activó — pero la reacción fue demasiado lenta (2h)
+- SCP sobre DeleteTrail: ✅ bloqueó la anti-forense
+- Firewall de salida de VPC: ❌ ausente (49 GB salieron sin impedimento)
+- Grants de CMK acotados a cargas de trabajo: ❌ svc-monitoring podía hacer Decrypt de prod-data-key
 
 ---
 
-## 5. Post-incident remediation plan (P1/P2/P3)
+## 4. Resumen ejecutivo para el CEO (≤1 página, sin jerga)
 
-| Priority | Item | Effort | Owner | Due |
+**Incidente INC-2026-001 — Informe de brecha de datos**
+**Para:** CEO y equipo ejecutivo · **De:** Ingeniería de Seguridad · **Estado:** Contenido · **Fecha:** 2026-08-23
+
+**Qué ocurrió.** Un atacante inició sesión a través de una red de anonimato usando las
+credenciales de una cuenta de servicio interna, otorgó a esa cuenta permisos completos de
+administrador y copió un gran volumen de datos de conductores fuera de nuestros sistemas
+durante aproximadamente dos horas antes de que cortáramos el acceso.
+
+**Qué se vio afectado.**
+- Datos: datos personales de conductores (nombres, cédulas, placas de vehículos, posiciones GPS).
+- Escala aproximada: ~45.7 GB del almacén `fleetpay-prod-drivers`.
+- Duración: ~2 horas desde el primer acceso hasta la contención.
+- Sistemas: un servidor de procesamiento y un bucket de datos; el servicio principal permaneció en línea.
+
+**Impacto regulatorio.**
+- **Ley 1581:** se requiere notificar a la SIC dentro de los **15 días hábiles** siguientes
+  a la detección. Envío objetivo: **2026-09-12**. Los titulares de datos afectados
+  probablemente requieran notificación directa (alto riesgo para sus derechos).
+- Conservar el registro del incidente durante al menos 5 años.
+
+**Tres acciones inmediatas.**
+1. Imponer MFA + bloquear redes de anonimato en todos los accesos de administración — SecOps, 48h.
+2. Añadir barreras de protección para que a una cuenta de servicio nunca se le pueda otorgar admin — SecOps, 72h.
+3. Activar controles de tráfico saliente para que no pueda salir data masiva — Redes, 7 días.
+
+**Impacto estimado.** Directo (forense, legal, notificación) + exposición regulatoria de
+hasta **2.000 SMMLV** bajo la Ley 1581 + reputacional. El rango se afinará tras el alcance
+forense.
+
+---
+
+## 5. Plan de remediación posincidente (P1/P2/P3)
+
+| Prioridad | Ítem | Esfuerzo | Responsable | Vence |
 |----------|------|--------|-------|-----|
-| P1 | SCP: deny IAM mods to `svc-*` users by non-IAM-admin principals | 1 d | SecOps | +3 d |
-| P1 | Enforce MFA + conditional access (block Tor/geo) on all IAM console users | 2 d | SecOps+IT | +7 d |
-| P1 | VPC egress firewall with domain allowlist (Network Firewall) | 1 w | Networks | +14 d |
-| P1 | Scope KMS key grants to workload roles; remove broad Decrypt | 2 d | Platform | +7 d |
-| P2 | Migrate `svc-monitoring` to OIDC federation (no static keys) | 2 w | Platform | +30 d |
-| P2 | ECR-only image policy + admission control (block docker.io/*) | 1 w | Platform | +30 d |
-| P2 | Deploy the 4 Sigma rules to the SIEM + on-call paging | 1 w | SecOps | +21 d |
-| P2 | Tabletop exercise on this exact scenario | 0.5 d | SecOps | +30 d |
-| P3 | Documented, scheduled quarterly SCP/control review process | 1 d | GRC | +60 d |
-| P3 | Route53 DNS Firewall for DNS-exfil TTP | 3 d | Networks | +45 d |
+| P1 | SCP: denegar modificaciones IAM a usuarios `svc-*` por parte de principales que no son admin de IAM | 1 d | SecOps | +3 d |
+| P1 | Imponer MFA + acceso condicional (bloquear Tor/geo) en todos los usuarios de consola IAM | 2 d | SecOps+TI | +7 d |
+| P1 | Firewall de salida de VPC con allowlist de dominios (Network Firewall) | 1 sem | Redes | +14 d |
+| P1 | Acotar los grants de claves KMS a los roles de carga de trabajo; eliminar Decrypt amplio | 2 d | Plataforma | +7 d |
+| P2 | Migrar `svc-monitoring` a federación OIDC (sin claves estáticas) | 2 sem | Plataforma | +30 d |
+| P2 | Política de imágenes solo desde ECR + control de admisión (bloquear docker.io/*) | 1 sem | Plataforma | +30 d |
+| P2 | Desplegar las 4 reglas Sigma en el SIEM + paginado on-call | 1 sem | SecOps | +21 d |
+| P2 | Ejercicio de simulación (tabletop) sobre este escenario exacto | 0.5 d | SecOps | +30 d |
+| P3 | Proceso documentado y programado de revisión trimestral de SCP/controles | 1 d | GRC | +60 d |
+| P3 | Route53 DNS Firewall para el TTP de exfiltración por DNS | 3 d | Redes | +45 d |
 
 ---
 
-## 6. Ley 1581 — SIC notification (Colombia)
+## 6. Ley 1581 — Notificación a la SIC (Colombia)
 
-- **Timing:** within 15 business days of detection (detection 2026-08-23 → by 2026-09-12).
-- **Channel:** SIC web portal, formal incident notification form.
-- **Content:** nature of incident, PII categories affected (identificación, ubicación, placa),
-  approx. number of data subjects, contact, measures taken/planned, possible consequences.
-- **Data subjects:** direct notice (email + public notice) given high risk.
-- **Record retention:** ≥ 5 years.
+- **Plazo:** dentro de los 15 días hábiles siguientes a la detección (detección 2026-08-23 → antes del 2026-09-12).
+- **Canal:** portal web de la SIC, formulario formal de notificación de incidentes.
+- **Contenido:** naturaleza del incidente, categorías de PII afectadas (identificación, ubicación, placa),
+  número aproximado de titulares de datos, contacto, medidas adoptadas/planificadas, posibles consecuencias.
+- **Titulares de datos:** notificación directa (correo + aviso público) dado el alto riesgo.
+- **Retención de registros:** ≥ 5 años.
