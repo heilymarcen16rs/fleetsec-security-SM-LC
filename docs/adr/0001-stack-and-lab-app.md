@@ -10,7 +10,7 @@ pruebas emparejadas maliciosas/legítimas.
 
 ## Decisión
 Construir una aplicación mínima en Express (Node 20) con una superficie de laboratorio
-`/vuln` (los 10 CWE) y un gemelo remediado `/secure`. Usar dependencias en JavaScript
+`/vuln` (los 10 CWE) y un espejo del mismo en el cual se aplicaran las remediaciones `/secure`. Usar dependencias en JavaScript
 puro (`sql.js` WASM SQLite, sin compilación nativa) para mantener la imagen Docker ligera
 y el pipeline rápido.
 
