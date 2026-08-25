@@ -9,7 +9,7 @@ description: |
 references:
   - https://attack.mitre.org/techniques/T1098/001/
   - https://docs.aws.amazon.com/IAM/latest/UserGuide/access-analyzer.html
-author: FleetSec Security Engineering (candidate)
+author: Lady Marcela Romero Rivero
 date: 2026/08/23
 tags:
   - attack.persistence

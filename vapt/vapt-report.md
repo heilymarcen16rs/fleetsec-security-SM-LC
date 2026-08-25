@@ -2,8 +2,8 @@
 
 **Objetivo:** FleetSec Telemetry API (aplicación de laboratorio propia, superficie `/vuln`)
 **Metodología:** OWASP WSTG v4.2 · PTES · NIST SP 800-115 · CVSS v3.1
-**Autorización:** entorno propio del candidato, construido para esta prueba (scope 100% autorizado)
-**Fecha:** 2026-08-23 · **Tester:** Ingeniero de Ciberseguridad (candidato)
+**Autorización:** entorno de laboratorio propio, construido para esta prueba (scope 100% autorizado)
+**Fecha:** 2026-08-23 · **Responsable:** Lady Marcela Romero Rivero · Líder de Ciberseguridad
 **Evidencia reproducible:** `app/tests/vapt.poc.test.js` (PoC) y `app/tests/remediation.test.js` (fix) — 20/20 tests en verde.
 
 ---

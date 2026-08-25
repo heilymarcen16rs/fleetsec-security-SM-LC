@@ -5,7 +5,7 @@
 > personales bajo **Ley 1581** e **ISO 27001 en proceso**, sin programa de seguridad
 > maduro y con un **breach activo** (credenciales AWS comprometidas, 45.7 GB de salida).
 
-**Autor:** Ingeniero de Ciberseguridad (candidato) · **Fecha:** 2026-08-23
+**Autora:** Lady Marcela Romero Rivero · Líder de Ciberseguridad · **Fecha:** 2026-08-23
 **Enlace al video (YouTube No listado):** `<<PEGAR_URL_AQUÍ>>` *(ver guion en `docs/video-script.md`)*
 
 ---
@@ -22,7 +22,12 @@
 | Bonus | `docker compose up` de un comando | `docker-compose.yml` | ✅ |
 
 **Verificación reproducible (ejecutada):** 20/20 tests (PoC+fix) · Semgrep custom
-dispara solo en `/vuln` · Checkov 251 passed/0 failed · 4 reglas Sigma válidas (pysigma).
+dispara solo en `/vuln` · Checkov 254 passed/0 failed/12 skips · 4 reglas Sigma válidas (pysigma).
+
+**📄 Documentos ejecutivos (PDF, plantilla corporativa):** el informe VAPT en
+`vapt/vapt-report.pdf` y el resto en `docs/pdf/` (Documento Maestro, Hardening &
+Cumplimiento, Detección & Respuesta a Incidentes, Reporte de IA, Plan de Sprints,
+Decisiones de Arquitectura, Arquitectura de Seguridad).
 
 ---
 

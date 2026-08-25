@@ -11,7 +11,7 @@ useDefault = true
 # the V-10 remediation in the /secure path.
 #   Reason:       intentional VAPT lab artifact for finding V-10
 #   Date:         2026-08-23
-#   Owner:        Security Engineering (candidate)
+#   Owner:        Lady Marcela Romero Rivero (Líder de Ciberseguridad)
 #   Review-by:    remove lab file before any production deployment
 # ---------------------------------------------------------------------------
 [allowlist]

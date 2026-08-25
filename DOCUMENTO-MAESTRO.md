@@ -1,8 +1,8 @@
 # FleetSec — Documento Maestro de la Solución
-### Prueba Técnica · Ingeniero Senior de Ciberseguridad · Simon Movilidad / Quantum Data Processing
+### Prueba Técnica · Líder de Ciberseguridad · Simon Movilidad / Quantum Data Processing
 
-**Autor:** Ingeniero de Ciberseguridad (candidato) · **Fecha:** 2026-08-23
-**Repositorio:** entregado como ZIP (ver `scripts/init-git-history.sh` para el historial atómico) · **Video:** guion en `docs/video-script.md`
+**Autora:** Lady Marcela Romero Rivero · Líder de Ciberseguridad · **Fecha:** 2026-08-23
+**Cliente:** Simon Movilidad · **Repositorio:** GitHub (historial de commits atómicos Conventional Commits)
 
 ---
 
@@ -172,25 +172,20 @@ Detalle completo (objetivos, alcance, entregables, controles): `docs/sprints.md`
 
 ---
 
-## 4. Guion de video (≤10 min, cámara activa)
+## 4. Sustentación en video (≤10 min)
 
-Guion palabra por palabra, con marcas de tiempo y qué mostrar en pantalla:
-**`docs/video-script.md`**. Cubre: introducción, arquitectura general, trampas, pipeline
-en ejecución, walkthrough de 2 vulnerabilidades (SQLi y JWT) explotadas y parcheadas, y
-respuesta al breach de la línea de tiempo. Instrucciones de grabación y publicación
-(YouTube No listado): `docs/instrucciones-candidato.md`.
+La sustentación cubre: introducción, arquitectura de seguridad (as-is/to-be), las trampas
+del enunciado, el pipeline DevSecOps en ejecución, el walkthrough de dos vulnerabilidades
+(SQLi y JWT) explotadas y parcheadas, y la respuesta al breach de la línea de tiempo.
 
 ---
 
-## 5. Instrucciones de ejecución para el candidato
+## 5. Puesta en marcha (resumen)
 
-Lo que la IA no puede hacer por ti (crear el repo remoto, grabar el video, generar el PNG
-de draw.io, aplicar Terraform en tu nube) está paso a paso en
-**`docs/instrucciones-candidato.md`**. Resumen:
-1. `bash scripts/init-git-history.sh` → historial atómico Conventional Commits.
-2. `gh repo create ... --push` → publicar el repo.
-3. Generar `architecture.png` desde el Mermaid en draw.io (pasos incluidos).
-4. Grabar con OBS siguiendo el guion; subir a YouTube **No listado**; pegar el link en el README.
+- `docker compose up --build` levanta el entorno completo (health en `/health`).
+- `cd app && npm ci && npm test` ejecuta las 20 pruebas (PoC + remediación).
+- `checkov -d terraform --external-checks-dir checkov` valida la infraestructura (254 passed / 0 failed).
+- El pipeline `.github/workflows/devsecops.yml` se dispara en cada push a `main`.
 
 ---
 

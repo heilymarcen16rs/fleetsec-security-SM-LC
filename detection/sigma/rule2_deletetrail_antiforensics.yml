@@ -9,7 +9,7 @@ description: |
 references:
   - https://attack.mitre.org/techniques/T1562/008/
   - https://attack.mitre.org/techniques/T1070/
-author: FleetSec Security Engineering (candidate)
+author: Lady Marcela Romero Rivero
 date: 2026/08/23
 tags:
   - attack.defense_evasion

@@ -1,8 +1,8 @@
 # FleetSec — Security Architecture Diagrams
 
-Author: Security Engineering (candidate) · Date: 2026-08-23 · Version: 1.0
+Author: Lady Marcela Romero Rivero · Líder de Ciberseguridad · Date: 2026-08-23 · Version: 1.0
 All diagrams render natively on GitHub (Mermaid). For the draw.io canonical artifact,
-follow the step-by-step import guide in the video script (§ Instrucciones de Ejecución).
+import the Mermaid source in draw.io: Arrange → Insert → Advanced → Mermaid.
 
 ---
 
