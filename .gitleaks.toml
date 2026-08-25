@@ -23,4 +23,7 @@ regexes = [
   '''AKIAIOSFODNN7EXAMPLE''',      # AWS documentation example key (not live)
   '''FleetSec_Pr0d_DB_2024!''',    # lab-only DB password
   '''super-secret-hs256-key-do-not-ship''',
+  # False positive: AWS Config managed-rule identifier, not a secret
+  # (hashicorp-tf-password rule matches "…password-policy = \"IAM_PASSWORD_POLICY\"").
+  '''IAM_PASSWORD_POLICY''',
 ]
