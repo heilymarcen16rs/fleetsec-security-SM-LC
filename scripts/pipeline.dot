@@ -1,0 +1,16 @@
+digraph pipeline {
+  rankdir=LR; bgcolor="white"; fontname="Helvetica"; fontsize=12;
+  labelloc="b"; label="FleetSec — Pipeline DevSecOps (fan-out / fan-in, <=15 min)";
+  node [shape=box, style="rounded,filled", fillcolor="#eef4f9", color="#0B3D5C", fontname="Helvetica", fontsize=11, margin="0.18,0.12", penwidth=1.4];
+  edge [color="#33454f", penwidth=1.2];
+  push [label="Push / PR", shape=oval, fillcolor="#0B3D5C", fontcolor="white"];
+  subgraph cluster_scan { label="Escaneos en paralelo"; labeljust="l"; fontname="Helvetica"; fontsize=10; style="rounded,dashed"; color="#9aa7b2";
+    sast[label="A1 · SAST\nSemgrep"]; sca[label="A2 · SCA + SBOM\nTrivy"]; sec[label="B · Secretos\nGitleaks"]; tst[label="C · Pruebas\nVAPT + remediación"]; iac[label="D · IaC\nCheckov + terraform"];
+  }
+  build [label="E · Build + Escaneo\nde imagen (Trivy)"];
+  dast [label="F · DAST\nZAP autenticado"];
+  gate [label="G · Puerta de\nSeguridad", fillcolor="#1E8449", fontcolor="white", penwidth=1.6];
+  push -> sast; push -> sca; push -> sec; push -> tst; push -> iac;
+  sast -> build; tst -> build; build -> dast;
+  sast -> gate; sca -> gate; sec -> gate; tst -> gate; iac -> gate; build -> gate; dast -> gate;
+}

@@ -4,7 +4,7 @@ Executive PDF generator for FleetSec deliverables.
 Cover + Table of Contents + confidential footer + corporate-blue theme + risk color coding.
 Usage: exec_pdf.py <in.md> <out.pdf> "<Title>" "<Subtitle>"
 """
-import sys, re, datetime, markdown
+import sys, os, re, datetime, markdown
 from weasyprint import HTML, CSS
 
 AUTHOR = "Lady Marcela Romero Rivero"
@@ -77,6 +77,7 @@ tr:nth-child(even) td { background:#f5f8fa; }
 
 blockquote { border-left:4px solid #E67E22; background:#fff8ec; margin:8px 0; padding:6px 12px; color:#5c4a24; font-size:9pt; }
 hr { border:0; border-top:1px solid #cfdae3; margin:16px 0; }
+img { max-width:100%%; max-height:20cm; height:auto; display:block; margin:10px auto; }
 """
 
 SEV = [
@@ -98,9 +99,9 @@ def build(md_path, out_path, title, subtitle):
     text = open(md_path, encoding='utf-8').read()
     # strip leading H1 (title lives on the cover)
     text = re.sub(r'^\s*#\s+.*\n', '', text, count=1)
-    # replace mermaid code blocks with a note (weasyprint can't render JS diagrams)
+    # (legacy) neutralize any leftover diagram code blocks
     text = re.sub(r'```mermaid.*?```',
-                  '\n> **Diagrama** — versión navegable en el repositorio (Mermaid) y export draw.io/PNG.\n',
+                  '\n> **Diagrama** — imagen renderizada disponible en el repositorio.\n',
                   text, flags=re.S)
     md = markdown.Markdown(extensions=['tables','fenced_code','toc','sane_lists','attr_list'])
     body = md.convert(text)
@@ -131,7 +132,8 @@ def build(md_path, out_path, title, subtitle):
     """
     html = f"<html><head><meta charset='utf-8'></head><body>{cover}{body}</body></html>"
     css = CSS(string=CSS_TMPL % {"conf": CONF, "client": CLIENT})
-    HTML(string=html).write_pdf(out_path, stylesheets=[css])
+    base = os.path.dirname(os.path.abspath(md_path))
+    HTML(string=html, base_url=base).write_pdf(out_path, stylesheets=[css])
     print("wrote", out_path)
 
 if __name__ == '__main__':

@@ -25,4 +25,4 @@ personalizada (CKV2_FLEETSEC_1 en YAML + Python con pruebas unitarias).
 - (+) El resultado de `checkov` es de calidad de auditoría: 251 aprobados / 0 fallidos / 12 skips documentados.
 - (+) La trampa del puerto de administración se impone mediante controles integrados (CKV_AWS_24/25) que APRUEBAN nuestros SG y RECHAZAN un SG defectuoso.
 - (−) `terraform validate`/`plan` completos deben ejecutarse localmente (sin credenciales cloud en CI); la sintaxis HCL se validó offline para los 12 archivos.
-- (−) El artefacto draw.io se genera a partir del código Mermaid proporcionado.
+- (−) Los diagramas se entregan como imágenes renderizadas (PNG, generadas con la librería `diagrams` + Graphviz); también se proporciona el artefacto editable en draw.io.

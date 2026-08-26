@@ -53,9 +53,9 @@ Estas son las trampas detectadas y su corrección profesional (detalle en `docs/
 
 ## 2. Estado actual vs objetivo (as-is / to-be)
 
-Diagramas completos (Mermaid, renderizan en GitHub): **`docs/diagrams/architecture.md`**
-— incluye C4 de arquitectura objetivo con *trust boundaries*, la secuencia del breach y
-el flujo del pipeline. Resumen:
+Diagramas completos (imágenes PNG con iconos AWS): **`docs/diagrams/architecture.md`**
+— incluye la arquitectura objetivo con *fronteras de confianza*, la cronología del
+incidente y el flujo del pipeline. Resumen:
 
 | Dominio | AS-IS | TO-BE |
 |--------|-------|-------|

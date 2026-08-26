@@ -1,116 +1,74 @@
 # FleetSec — Diagramas de Arquitectura de Seguridad
 
 Autora: Lady Marcela Romero Rivero · Líder de Ciberseguridad · Fecha: 2026-08-23 · Versión: 1.0
-Todos los diagramas se renderizan de forma nativa en GitHub (Mermaid). Para el artefacto
-canónico en draw.io, importe el código Mermaid en draw.io: Arrange → Insert → Advanced → Mermaid.
+
+Los diagramas se entregan como imágenes renderizadas (PNG). El artefacto editable de
+arquitectura también está disponible en draw.io.
 
 ---
 
 ## 1. As-Is vs To-Be (postura de seguridad)
 
+**Tabla 1.** Comparación del estado actual (sin programa de seguridad maduro) frente a la
+línea base objetivo por dominio de control.
+
 | Dominio | AS-IS (hoy, sin programa maduro) | TO-BE (línea base objetivo) |
 |--------|----------------------------------|--------------------------|
-| Identidad | Usuarios IAM, sin MFA, admin en cuentas de servicio | SSO + MFA, STS, rol por servicio, barreras de protección SCP |
+| Identidad | Usuarios IAM, sin MFA, admin en cuentas de servicio | SSO + MFA, STS, rol por servicio, barreras SCP |
 | Borde | Sin WAF, puerto 80/443 directo | CloudFront + WAF v2 (SQLi/bad-inputs/rate/geo) |
 | Red | Plana, RDS público, SG 0.0.0.0/0 | VPC de 3 capas, subred de datos aislada, sin RDS público |
-| Datos | AES-256 por defecto, BPA parcial | SSE-KMS CMC, BPA de cuenta, Object Lock en logs |
+| Datos | AES-256 por defecto, BPA parcial | SSE-KMS CMK, BPA de cuenta, Object Lock en logs |
 | Secretos | Codificados en el código fuente (V-10) | Secrets Manager, rotación de 30 días |
 | Logging | Trail regional, sin validación, PII en logs | Trail multirregión + validación, enmascaramiento de PII |
-| Detección | Ninguna | GuardDuty + Security Hub + reglas Sigma + threat-intel set |
+| Detección | Ninguna | GuardDuty + Security Hub + reglas Sigma + Threat Intel Set |
 | SDLC | Sin puertas de seguridad | Pipeline DevSecOps (SAST/SCA/DAST/IaC/secretos), ≤15 min |
 | IR | Ad-hoc | Playbook NIST 800-61, mapeo MITRE, ruta a la SIC |
 
-## 2. Arquitectura objetivo (C4 Container + fronteras de confianza)
+---
 
-```mermaid
-flowchart TB
-    classDef person fill:#0B5394,stroke:#073763,color:#fff
-    classDef container fill:#1E3A8A,stroke:#1E40AF,color:#fff
-    classDef external fill:#6B7280,stroke:#374151,color:#fff
-    classDef data fill:#065F46,stroke:#064E3B,color:#fff
+## 2. Arquitectura de seguridad objetivo (nivel contenedor, con fronteras de confianza)
 
-    driver([Conductor / Despachador]):::person
-    admin([Operador de Seguridad]):::person
+**Figura 1.** Arquitectura objetivo desplegada en AWS. Cada agrupación representa una
+**frontera de confianza**; cada flecha indica el protocolo y la autenticación del flujo.
 
-    subgraph TB1[Público - no confiable]
-      cdn[CloudFront + WAF v2<br/>SQLi/BadInputs/RateLimit/Geo CO-PE-US]:::external
-    end
-    subgraph TB2[Subred pública VPC - 2 AZ]
-      alb[ALB :443<br/>TLS1.2+, ACM cert]:::container
-    end
-    subgraph TB3[Subred de app VPC - privada, salida NAT]
-      ecs[ECS Fargate :8080<br/>Node 20, non-root, IAM role]:::container
-    end
-    subgraph TB4[Subred de datos VPC - privada, SIN NAT]
-      rds[(RDS Postgres<br/>Multi-AZ, CMK, TLS, sin acceso público)]:::data
-      s3[(S3 Telemetría<br/>SSE-KMS, BPA, versionado)]:::data
-      sm[[Secrets Manager<br/>cred BD, rotación 30d]]:::data
-    end
-    subgraph SEC[Seguridad y Observabilidad]
-      gd[GuardDuty + Threat Intel Set]:::external
-      ct[CloudTrail multirregión<br/>+ Object Lock logs]:::data
-      sh[Security Hub FSBP+CIS1.4]:::external
-    end
+![Arquitectura de seguridad objetivo de FleetSec en AWS](architecture-target.png)
 
-    driver -->|HTTPS JWT bearer| cdn
-    admin -->|HTTPS SSO+MFA| cdn
-    cdn -->|HTTPS firmado| alb
-    alb -->|HTTPS, SG-app only| ecs
-    ecs -->|TLS, IAM auth, SG-data| rds
-    ecs -->|TLS, IAM role, VPC endpoint| s3
-    ecs -->|GetSecretValue, KMS| sm
-    ecs -.->|logs/métricas| ct
-    rds -.->|hallazgos| gd
-    s3 -.->|eventos de datos| ct
-    ct --> sh
-    gd --> sh
-```
+**Fronteras de confianza (de mayor a menor exposición):**
 
-**Fronteras de confianza:** TB1 internet→borde (WAF), TB2 borde→app (SG-app solo desde el ALB),
-TB3→TB4 app→datos (SG-data 5432 solo desde SG-app; la subred de datos no tiene ruta a internet).
+1. **Internet — No confiable:** CloudFront + WAF v2 filtran todo el tráfico entrante
+   (reglas gestionadas SQLi/BadInputs en BLOCK, rate limiting y geo-restricción CO/PE/US).
+2. **Subred pública (2 AZ):** solo el ALB (TLS 1.2+, certificado ACM); su Security Group
+   acepta 80/443 exclusivamente.
+3. **Subred de aplicación (privada):** ECS Fargate (Node 20, contenedor non-root, rol IAM);
+   solo acepta tráfico desde el Security Group del ALB.
+4. **Subred de datos (privada, sin NAT):** RDS Multi-AZ cifrado con CMK y sin endpoint
+   público, S3 con SSE-KMS y Block Public Access, y Secrets Manager. No tiene ruta a Internet.
 
-**Clasificación de datos:** RDS/S3 = **PII (Ley 1581)**; Secrets Manager = **secretos**;
-logs de CloudTrail = **auditoría/inmutable**.
+**Clasificación de datos:** RDS y S3 contienen **PII sujeta a Ley 1581**; Secrets Manager
+almacena **secretos**; los logs de CloudTrail son **evidencia de auditoría inmutable**
+(Object Lock COMPLIANCE). Toda la telemetría de seguridad converge en Security Hub
+(estándares FSBP + CIS AWS Foundations v1.4).
 
-## 3. Flujo de datos del incidente (brecha INC-2026-001)
+---
 
-```mermaid
-sequenceDiagram
-    autonumber
-    participant A as Atacante (185.220.101.22 / Tor)
-    participant Con as Consola AWS
-    participant IAM as IAM
-    participant S3 as S3 fleetpay-prod-drivers
-    participant KMS as KMS prod-data-key
-    participant Net as VPC / Internet
-    A->>Con: ConsoleLogin (credenciales válidas, sin MFA)  T+00:00
-    Con->>IAM: CreateLoginProfile svc-monitoring  T+00:15
-    A->>IAM: AttachUserPolicy AdministratorAccess  T+00:22
-    A->>S3: 387x GetObject / 8min (45.7 GB)  T+00:35
-    A->>KMS: 12x Decrypt  T+00:58
-    A->>Net: 10.0.2.45 -> 185.220.101.22:443 (49 GB)  T+01:10
-    A->>IAM: DeleteTrail  -- BLOQUEADO por SCP  T+01:45
-    Note over A,Net: hallazgo de exfiltración DNS de GuardDuty T+01:50; alerta recibida T+02:00
-```
+## 3. Flujo del incidente (brecha INC-2026-001)
+
+**Figura 2.** Cadena de ataque reconstruida a partir de los indicadores embebidos, con la
+técnica MITRE ATT&CK v14 correspondiente a cada paso. En verde, el control que **funcionó**
+(la SCP que bloqueó el intento de borrado de CloudTrail).
+
+![Cronología del incidente INC-2026-001 mapeada a MITRE ATT&CK](incident-timeline.png)
+
+El detalle de contención (AWS CLI exacto), el mapeo completo de técnicas, el análisis de
+causa raíz y el resumen ejecutivo se encuentran en
+`detection/playbooks/ir-playbook.md`.
+
+---
 
 ## 4. Pipeline DevSecOps (fan-out / fan-in, ≤15 min)
 
-```mermaid
-flowchart LR
-    push[Push / PR] --> sast[A1 SAST<br/>Semgrep]
-    push --> sca[A2 SCA+SBOM<br/>Trivy]
-    push --> sec[B Secretos<br/>Gitleaks]
-    push --> tst[C Pruebas<br/>VAPT+corrección]
-    push --> iac[D IaC<br/>Checkov+tfvalidate]
-    sast --> build[E Build+escaneo de imagen<br/>Trivy CRITICAL]
-    tst --> build
-    build --> dast[F DAST<br/>ZAP auth]
-    sast --> gate{{G Puerta de Seguridad}}
-    sca --> gate
-    sec --> gate
-    tst --> gate
-    iac --> gate
-    build --> gate
-    dast --> gate
-    gate --> rel[Candidato a release]
-```
+**Figura 3.** Los jobs independientes se ejecutan en paralelo (fan-out) y convergen en la
+Puerta de Seguridad (fan-in). El diseño en paralelo, con cachés de npm/Trivy, sostiene el
+SLA de ≤15 minutos.
+
+![Pipeline DevSecOps de FleetSec: fan-out de escaneos y fan-in en la puerta de seguridad](pipeline.png)
