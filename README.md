@@ -5,8 +5,8 @@
 > personales bajo **Ley 1581** e **ISO 27001 en proceso**, sin programa de seguridad
 > maduro y con un **breach activo** (credenciales AWS comprometidas, 45.7 GB de salida).
 
-**Autora:** Lady Marcela Romero Rivero · Líder de Ciberseguridad · **Fecha:** 2026-08-23
-**Enlace al video (YouTube No listado):** `<<PEGAR_URL_AQUÍ>>` *(ver guion en `docs/video-script.md`)*
+**Autora:** Lady Marcela Romero Rivero · Ingeniero de Ciberseguridad · **Fecha:** 2026-08-23
+**Enlace al video (YouTube No listado):** `<<PEGAR_URL_AQUÍ>>`
 
 ---
 
@@ -16,7 +16,7 @@
 |---|-----------|-----------|--------|
 | 01 | Pipeline DevSecOps | `.github/workflows/devsecops.yml`, `break-glass.yml`, `semgrep/` | ✅ |
 | 02 | VAPT + remediación | `app/`, `app/tests/`, `vapt/vapt-report.md` + `.pdf` | ✅ 10/10 |
-| 03 | Hardening AWS (IaC) | `terraform/`, `checkov/`, `docs/compliance-matrix.md` | ✅ 251/0/12 |
+| 03 | Hardening AWS (IaC) | `terraform/`, `checkov/`, `docs/compliance-matrix.md` | ✅ 254/0/12 |
 | 04 | Detección e IR | `detection/sigma/`, `detection/threat-intel/`, `detection/playbooks/` | ✅ |
 | 05 | Documentación | `README.md`, `docs/adr/`, `docs/diagrams/`, `docs/ai-report.md` | ✅ |
 | Bonus | `docker compose up` de un comando | `docker-compose.yml` | ✅ |
@@ -33,7 +33,7 @@ Decisiones de Arquitectura, Arquitectura de Seguridad).
 
 ## 1. Análisis crítico y "trampas" de la prueba (léase primero)
 
-Un ingeniero senior no implementa requerimientos al pie de la letra si son inseguros.
+Un ingeniero de ciberseguridad no implementa requerimientos al pie de la letra si son inseguros.
 Estas son las trampas detectadas y su corrección profesional (detalle en `docs/adr/0005`).
 
 | # | Trampa en el enunciado | Riesgo | Corrección aplicada |
@@ -98,7 +98,7 @@ cd terraform/environments/prod
 terraform init -backend=false && terraform validate
 cd ../../..
 python3 checkov/fleetsec_sg_check.py                          # self-test de la política custom
-checkov -d terraform --external-checks-dir checkov            # 251 passed / 0 failed / 12 skips
+checkov -d terraform --external-checks-dir checkov            # 254 passed / 0 failed / 12 skips
 ```
 
 ### 3.5 Detección (Sigma)
@@ -147,7 +147,7 @@ A.5.7, A.8.9, A.8.11, A.8.16, A.8.23, A.8.28).
 
 **Herramientas/tareas:** IA (Claude) para generar app, reglas Semgrep/Sigma, Terraform,
 CVSS, playbook y este informe. **Cada artefacto se verificó con herramientas reales**
-(20 tests, Semgrep, Checkov 251/0, pysigma, calculadora CVSS 3.1, weasyprint).
+(20 tests, Semgrep, Checkov 254/0, pysigma, calculadora CVSS 3.1, weasyprint).
 
 **Alucinación admitida (obligatorio):** el `Dockerfile` inicial fijó la imagen base con
 un **digest SHA256 inventado** (`@sha256:2f7ceb6f...`), plausible pero falso — habría

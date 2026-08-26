@@ -1,9 +1,9 @@
 # FleetSec — Diagramas de Arquitectura de Seguridad
 
-Autora: Lady Marcela Romero Rivero · Líder de Ciberseguridad · Fecha: 2026-08-23 · Versión: 1.0
+Autora: Lady Marcela Romero Rivero · Ingeniero de Ciberseguridad · Fecha: 2026-08-23 · Versión: 1.0
 
-Los diagramas se entregan como imágenes renderizadas (PNG). El artefacto editable de
-arquitectura también está disponible en draw.io.
+Los diagramas se entregan como imágenes renderizadas (PNG), generadas con la
+librería `diagrams` (iconos oficiales de AWS) y Graphviz.
 
 ---
 

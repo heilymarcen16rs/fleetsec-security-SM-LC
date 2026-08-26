@@ -1,7 +1,7 @@
 # FleetSec — Documento Maestro de la Solución
-### Prueba Técnica · Líder de Ciberseguridad · Simon Movilidad / Quantum Data Processing
+### Prueba Técnica · Ingeniero de Ciberseguridad · Simon Movilidad / Quantum Data Processing
 
-**Autora:** Lady Marcela Romero Rivero · Líder de Ciberseguridad · **Fecha:** 2026-08-23
+**Autora:** Lady Marcela Romero Rivero · Ingeniero de Ciberseguridad · **Fecha:** 2026-08-23
 **Cliente:** Simon Movilidad · **Repositorio:** GitHub (historial de commits atómicos Conventional Commits)
 
 ---
@@ -46,7 +46,7 @@ prueba contiene trampas deliberadas; abajo se detallan y se corrigen.
 
 ## 1. Análisis crítico y "trampas" de la prueba
 
-Un ingeniero senior detecta requerimientos inseguros y los corrige. Las diez trampas
+Un ingeniero de ciberseguridad detecta requerimientos inseguros y los corrige. Las diez trampas
 identificadas y su mitigación profesional (detalle en `docs/adr/0005-handling-test-traps.md`):
 
 1. **KMS "key policy sin `Principal AWS *`".** Un `Principal:"*"` en la política de una

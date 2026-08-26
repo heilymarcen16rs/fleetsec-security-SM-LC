@@ -22,7 +22,7 @@ riesgo aceptado, la política de la clave raíz de KMS). Añadir una barrera de 
 personalizada (CKV2_FLEETSEC_1 en YAML + Python con pruebas unitarias).
 
 ## Consecuencias
-- (+) El resultado de `checkov` es de calidad de auditoría: 251 aprobados / 0 fallidos / 12 skips documentados.
+- (+) El resultado de `checkov` es de calidad de auditoría: 254 aprobados / 0 fallidos / 12 skips documentados.
 - (+) La trampa del puerto de administración se impone mediante controles integrados (CKV_AWS_24/25) que APRUEBAN nuestros SG y RECHAZAN un SG defectuoso.
 - (−) `terraform validate`/`plan` completos deben ejecutarse localmente (sin credenciales cloud en CI); la sintaxis HCL se validó offline para los 12 archivos.
-- (−) Los diagramas se entregan como imágenes renderizadas (PNG, generadas con la librería `diagrams` + Graphviz); también se proporciona el artefacto editable en draw.io.
+- (−) Los diagramas se entregan como imágenes renderizadas (PNG, generadas con la librería `diagrams` + Graphviz), no como fuente Mermaid.

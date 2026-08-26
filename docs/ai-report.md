@@ -9,7 +9,7 @@ verificación humana. Se documenta de forma específica y honesta.
 |-------|-------------------|------------------------------|
 | App vulnerable + parches (10 CWE) | Generación del código `/vuln` y `/secure` en Express | Se ejecutaron los 20 tests (`node --test`) — 20/20 en verde antes de aceptar |
 | Reglas Semgrep propias | Redacción inicial de patrones | Se ejecutó Semgrep contra el código; se corrigieron patrones que no disparaban (paso a modo *taint*) |
-| Módulo Terraform | Generación de recursos AWS | `checkov` real (251 passed / 0 failed) + parseo HCL de los 12 archivos |
+| Módulo Terraform | Generación de recursos AWS | `checkov` real (254 passed / 0 failed) + parseo HCL de los 12 archivos |
 | Reglas Sigma | Redacción a partir de la línea de tiempo | Validación con `pysigma` (`SigmaCollection.from_yaml`) — se corrigió un modificador inválido |
 | CVSS de los 10 hallazgos | Propuesta de vectores | Recalculados con una calculadora CVSS 3.1 propia; se ajustaron los que no cuadraban |
 | Playbook IR / comandos AWS CLI | Redacción de pasos | Revisión de reversibilidad y orden (evidencia antes de contención) |

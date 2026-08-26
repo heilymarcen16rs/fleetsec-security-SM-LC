@@ -8,7 +8,7 @@ import sys, os, re, datetime, markdown
 from weasyprint import HTML, CSS
 
 AUTHOR = "Lady Marcela Romero Rivero"
-ROLE = "Líder de Ciberseguridad"
+ROLE = "Ingeniero de Ciberseguridad"
 CLIENT = "Simon Movilidad"
 CONF = "CONFIDENCIAL — Exclusivo para Simon Movilidad"
 MONTHS = ["", "enero","febrero","marzo","abril","mayo","junio","julio",

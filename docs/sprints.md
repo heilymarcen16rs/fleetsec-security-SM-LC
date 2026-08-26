@@ -31,7 +31,7 @@ DevSecOps y **Definition of Done (DoD)**. Mapea 1:1 con los entregables de la pr
 - **Alcance:** IAM mínimo, S3 + Object Lock, VPC 3 capas, RDS Multi-AZ CMK, KMS, Secrets Manager, CloudTrail, Config, GuardDuty, Security Hub, WAFv2.
 - **Entregables:** `terraform/modules/security-baseline`, `terraform/environments/prod`, `checkov/`, tabla de cumplimiento.
 - **Controles DevSecOps:** `terraform validate`; Checkov hard-gate (bloquea SG 0.0.0.0/0 en 22/3389); ≥10 controles mapeados a CIS/ISO/Ley 1581.
-- **DoD:** HCL válido; Checkov 251 passed / 0 failed / 12 skips documentados; tabla de cumplimiento ≥10 controles con PASS/FAIL/N/A.
+- **DoD:** HCL válido; Checkov 254 passed / 0 failed / 12 skips documentados; tabla de cumplimiento ≥10 controles con PASS/FAIL/N/A.
 
 ## Sprint 4 — Detección y respuesta a incidentes (Entregable 04)
 - **Objetivos:** capacidad de detección y un playbook IR ejecutable.
